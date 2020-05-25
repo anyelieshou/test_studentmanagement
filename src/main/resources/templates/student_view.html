@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>学生管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="//unpkg.com/view-design/dist/styles/iview.css">
+    <script src="#(ctxPath)/static/js/jquery-3.4.1.min.js"></script>
+    <script src="#(ctxPath)/static/js/vue.min.js"></script>
+    <!-- 引入组件库 -->
+    <script src="//unpkg.com/view-design/dist/iview.min.js"></script>
+    <style type="text/css">
+        .center{
+            text-align: center;
+        }
+        a{
+            text-decoration: none;
+        }
+        .currentOrder{
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<ul class="nav nav-pills">
+    <li role="presentation" style="margin-left: 60px"><a href="#(ctxPath)/index">首页</a></li>
+    <li role="presentation" class="active" style="margin-left: 60px"><a href="#">学生管理</a></li>
+    <li role="presentation" style="margin-left: 60px"><a href="#(ctxPath)/class">班级管理</a></li>
+</ul>
+<h1 class="center">学生信息管理</h1>
+<div id="stu_div" class="center" style="margin-top: 50px">
+    <div>
+        姓名：<input type="text" v-model="keyword"/>
+        班级:<select v-model="classId">
+        <option></option>
+        #for(clazz:classList)
+        <option value="#(clazz.id)">#(clazz.class_full_name)</option>
+        #end
+    </select>
+        <button @click="queryStudent">搜索</button>
+
+        <div style="text-align: left;margin-left:250px">
+            <button @click="showStuForm">新增</button>
+            <button @click="deleteStudents" style="margin-left: 10px">删除</button>
+        </div>
+    </div>
+    <table align="center" class="center" width="60%" border="1"
+           cellspacing="0" cellpadding="0">
+        <thead>
+        <tr>
+            <th width="50"><input type="checkbox"
+                                  v-model="stuCheck.isCheckAll"
+                                  @change="checkAll"></th>
+            <th width="100">学号
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_no'&& currentOrderby.asc}"
+                   @click="orderStudentList('stu_no',true)">↑</a>
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_no'&& !currentOrderby.asc}"
+                   @click="orderStudentList('stu_no',false)">↓</a>
+            </th>
+            <th width="100">姓名
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_name'&& currentOrderby.asc}"
+                   @click="orderStudentList('stu_name',true)">↑</a>
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_name'&& !currentOrderby.asc}"
+                   @click="orderStudentList('stu_name',false)">↓</a>
+            </th>
+            <th width="100">出生日期</th>
+            <th width="100">班级编号</th>
+            <th width="100">班级名称</th>
+            <th width="100">入学年份</th>
+            <th width="100">操作</th>
+        </tr>
+        </thead>
+        <tr v-if="stuQueryResult.stuArray==null"><td colspan="5">loading...</td></tr>
+        <tbody v-for="stu in stuQueryResult.stuArray">
+        <tr>
+            <td><input type="checkbox" :value="stu.id" v-model="stuCheck.checkedValues"></td>
+            <td><a href="javascript://" @click="showViewForm(stu.id)">{{stu.stu_no}}</a></td>
+            <td>{{stu.stu_name}}</td>
+            <td>{{stu.stu_birthday}}</td>
+            <td>{{stu.class_no}}</td>
+            <td>{{stu.class_name}}</td>
+            <td>{{stu.enter_year}}</td>
+            <td><a href="javascript://" @click="showEditForm(stu.id)">修改</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <!--分页-->
+    <div>
+        <div align="center">
+            <a href="javascript://" @click="gotoPage(1)">首页</a>
+            <a href="javascript://" @click="gotoPage(queryPage.currentPage-1)">上一页</a>
+            <a href="javascript://" @click="gotoPage(queryPage.currentPage+1)">下一页</a>
+            <a href="javascript://" @click="gotoPage(stuQueryResult.pageCount)">末页</a>
+        </div>
+        <div style="text-align: center">
+            当前是第{{queryPage.currentPage}}页，每页
+            <select id="page_size_rel" v-model="queryPage.pageSize" @change="queryStudent">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+            </select>
+            条，共{{stuQueryResult.pageCount}}页,
+            共{{stuQueryResult.recCount}}条数据
+        </div>
+    </div>
+    <!--弹框-->
+    <Modal v-model="show_stu_form" @on-cancel="clearCurrentStudent">
+        <p slot="header" style="color:#f60;text-align:center">
+            <Icon type="information-circled"></Icon>
+            <span>{{currentStudent.id==null?"新增":"修改"}}学生信息</span>
+        </p>
+        <input type="hidden" v-model="currentStudent.id">
+        <div style="margin-top: 5px">班级ID:<input type="text" v-model.trim="currentStudent.class_fk"></div>
+        <div style="margin-top: 5px">学号:<input type="text" v-model.trim="currentStudent.stu_no"></div>
+        <div style="margin-top: 5px">姓名:<input type="text" v-model.trim="currentStudent.stu_name"></div>
+        <div style="margin-top: 5px">生日:<input type="date" v-model.trim="currentStudent.stu_birthday"></div>
+        <form id="upload_form" enctype="multipart/form-data" method="post" action="">
+            <div style="margin-top: 5px">
+                上传头像:<input type="file" id="stu_photo_file" name="stu_photo_file" accept="image/*"/></div>
+            <div>{{currentStudent.stu_photo}}</div>
+        </form>
+        <button @click="uploadFile">上传</button>
+        <div slot="footer" style="text-align: center">
+            <button type="primary" @click="saveStudent">保存</button>
+        </div>
+    </Modal>
+    <modal v-model="show_view_form" title="查看学生信息" @on-cancel="clearCurrentStudent">
+        <div style="margin-top: 5px">
+            <img :src='"#(ctxPath)"+currentStudent.stu_photo' @error="showDefaultImg" width="200"/>
+        </div>
+        <div style="margin-top: 5px">学号:{{currentStudent.stu_no}}</div>
+        <div style="margin-top: 5px">姓名:{{currentStudent.stu_name}}</div>
+        <div style="margin-top: 5px">生日:{{currentStudent.stu_birthday}}</div>
+        <div slot="footer" style="text-align: center"></div>
+    </modal>
+</div>
+</body>
+</html>
+<script>
+    var vue=new Vue({
+        el:"#stu_div",
+        data:{
+            keyword:"",
+            classId:"",
+            stuQueryResult:{//查询结果
+                stuArray:null
+            },
+            queryPage:{
+                currentPage:1,
+                pageSize:10
+            },
+            currentOrderby:{//当前排序参数
+                orderby:"stu_no",
+                asc:true
+            },
+            stuCheck:{
+                isCheckAll:false,
+                checkedValues:[]
+            },
+            show_stu_form:false,
+            show_view_form:false,
+            currentStudent:{
+                id:null,
+                stu_no:"",
+                stu_name:"",
+                stu_birthday:"",
+                stu_photo:"",
+                class_fk:""
+            }
+        },
+        methods:{
+            clearCurrentStudent:function(){
+                this.currentStudent.id=null;
+                this.currentStudent.stu_no="";
+                this.currentStudent.stu_name="";
+                this.currentStudent.stu_birthday="";
+                this.currentStudent.stu_photo="";
+                this.currentStudent.class_fk="";
+            },
+            uploadFile:function(){
+                var formData=new FormData($("#upload_form")[0]);//创建一个form类型的数据
+                formData.append("file",$("#stu_photo_file")[0].files);//获取上传文件的数据
+                $.ajax({
+                    type:"post",
+                    url:"#(ctxPath)/student/uploadFiles",
+                    processData:false,
+                    contentType:false,
+                    data:formData,
+                    success:function (ret) {
+                        if (ret.indexOf("error:")>-1){
+                            alert(ret.substring(6));
+                            return;
+                        }
+                        //保存路径
+                        alert("文件已上传！");
+                        vue.currentStudent.stu_photo=ret;
+                    },
+                    error:function (err) {
+                        alert(err);
+                    }
+                });
+            },
+            showDefaultImg:function(){
+                this.currentStudent.stu_photo="/static/img/renwu.jpg";
+            },
+            showViewForm:function(stuId){
+                $.get("#(ctxPath)/student/viewStudentInfo",{
+                    stuId:stuId
+                },result=>{
+                    if(result.status != 0){
+                    //发生错误
+                    alert(result.info);
+                    return;
+                }
+                var data=result.data;
+                this.currentStudent.id=stuId;
+                this.currentStudent.stu_no=data.stu_no;
+                this.currentStudent.stu_name=data.stu_name;
+                this.currentStudent.stu_birthday=data.stu_birthday;
+                this.currentStudent.stu_photo=data.stu_photo;
+                this.currentStudent.class_fk=data.class_fk;
+                this.show_view_form=true;
+            })
+            },
+            showEditForm:function(stuId){
+                $.get("#(ctxPath)/student/viewStudentInfo",{
+                    stuId:stuId
+                },result=>{
+                    if(result.status != 0){
+                    //发生错误
+                    alert(result.info);
+                    return;
+                }
+                var data=result.data;
+                this.currentStudent.id=stuId;
+                this.currentStudent.stu_no=data.stu_no;
+                this.currentStudent.stu_name=data.stu_name;
+                this.currentStudent.stu_birthday=data.stu_birthday;
+                this.currentStudent.class_fk=data.class_fk;
+
+                this.showStuForm();
+            })
+            },
+            showStuForm:function(){
+                this.show_stu_form=true;
+            },
+            saveStudent:function(){
+                if (this.currentStudent.id==null){
+                    //新增操作
+                    if (this.currentStudent.stu_no == "" || this.currentStudent.stu_name ==""
+                        || this.currentStudent.stu_birthday==""){
+                        alert("请填写完整的信息！");
+                        return;
+                    }
+                    $.post("/student/addStudent",{
+                        stu_no:this.currentStudent.stu_no,
+                        stu_name:this.currentStudent.stu_name,
+                        stu_birthday:this.currentStudent.stu_birthday,
+                        stu_photo:this.currentStudent.stu_photo,
+                        class_fk:this.currentStudent.class_fk
+                    },result=>{
+                        if("success"==result){
+                        this.queryStudent();
+                        this.show_stu_form=false;
+                        this.clearCurrentStudent();
+                    }else{
+                        alert(result);
+                    }
+                })
+                }else{
+                    //修改学生信息
+                    $.post("/student/updateStudent",{
+                        stu_id:this.currentStudent.id,
+                        stu_no:this.currentStudent.stu_no,
+                        stu_name:this.currentStudent.stu_name,
+                        stu_birthday:this.currentStudent.stu_birthday,
+                        stu_photo:this.currentStudent.stu_photo,
+                        class_fk:this.currentStudent.class_fk
+                    },result=>{
+                        if (result=="success"){
+                        this.queryStudent();
+                        this.show_stu_form=false;
+                        this.clearCurrentStudent();
+                    }else {
+                        alert(result);
+                    }
+                })
+                }
+            },
+            checkAll:function(){
+                var stuArray=this.stuQueryResult.stuArray;
+                if (stuArray!=null){
+                    if (this.stuCheck.isCheckAll){
+                        //全选中
+                        this.stuCheck.checkedValues=[];
+                        for (var i=0;i<stuArray.length;i++){
+                            this.stuCheck.checkedValues.push(stuArray[i].id);
+                        }
+                    }else {
+                        //全不选
+                        this.stuCheck.checkedValues=[];
+                    }
+                }
+            },
+            queryStudent:function () {
+                this.stuCheck.isCheckAll=false;
+                this.stuCheck.checkedValues=[];
+                this.stuQueryResult.stuArray=null;
+                $.post("/student/query",{
+                    keyword:this.keyword,
+                    classId:this.classId,
+                    orderby:this.currentOrderby.orderby,
+                    asc:this.currentOrderby.asc,
+                    pageNo:this.queryPage.currentPage,
+                    pageSize:this.queryPage.pageSize
+                },response=>this.stuQueryResult=JSON.parse(response));
+            },
+            orderStudentList:function(orderby,asc){
+                this.currentOrderby.orderby=orderby;
+                this.currentOrderby.asc=asc;
+                this.queryStudent();
+            },
+            gotoPage:function (pageNo) {
+                if (pageNo<1){
+                    alert("当前已经是第一页");
+                    return;
+                }
+                if (pageNo>this.stuQueryResult.pageCount) {
+                    alert("已经是最末页");
+                    return;
+                }
+                this.queryPage.currentPage=pageNo;
+                this.queryStudent();
+            },
+            deleteStudents:function() {
+                var studentIds = "";
+                var checkedValues = this.stuCheck.checkedValues;
+                if (checkedValues.length == 0) {
+                    alert("请选择要删除的记录");
+                    return;
+                }
+                if (confirm("确认要删除选中的记录吗？")) {
+                    for (var i = 0; i < checkedValues.length; i++) {
+                        studentIds += checkedValues[i] + ",";
+                    }
+                    studentIds = studentIds.substring(0, studentIds.length - 1);
+                    $.post("/student/deleteStudents", {
+                        studentIds: studentIds
+                    }, result => {
+                        if("success"!= result){
+                        alert("删除失败" + result);
+                        return;
+                    }
+                    //删除成功,刷新查询数据
+                    this.queryStudent();
+                })
+                }
+            }
+        },
+        mounted:function () {
+            this.queryStudent();
+        }
+    })
+</script>

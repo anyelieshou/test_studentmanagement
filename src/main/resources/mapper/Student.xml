@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.springboottest.dao.StudentDao">
+
+    <!--查询班级信息-->
+    <select id="findAllClass" resultType="java.util.Map">
+        select id,concat(class_no,'-',class_name) class_full_name from t_class
+        where id in (select distinct class_fk from t_student) order by class_no
+    </select>
+
+    <!--根据主键id查询学生-->
+    <select id="findStudentById" resultType="com.springboottest.model.Student">
+        select * from t_student where id=#{id}
+    </select>
+
+    <!--根据学号和姓名查询结果分页并排序（三表关联）-->
+    <select id="queryStudent" resultType="java.util.Map">
+        select t_student.*,class_no,class_name,enter_year ,t_user.username from t_student left join t_class on t_class.id=class_fk
+        left join t_user on t_class.manage_user_fk=t_user.id
+        <if test="classId != '' or keyword !=''">
+            where
+        </if>
+        <if test="classId !=''"> class_fk=${classId}</if>
+        <if test="classId !='' and keyword !=''">and</if>
+        <if test="keyword !=''">(stu_no like '%${keyword}%'or stu_name like '%${keyword}%')</if>
+        order by ${orderby} ${asc}
+    </select>
+
+    <!--删除学生信息-->
+    <delete id="deleteStudentById">
+        delete from t_student where id=#{ids}
+    </delete>
+
+    <!--根据id查询班级-->
+    <select id="findClassById" resultType="com.springboottest.model.Class">
+        select * from t_class where id=#{id}
+    </select>
+    <!--根据学号查询学生-->
+    <select id="findStudentByStuNo" resultType="com.springboottest.model.Student">
+        select * from t_student where stu_no=#{stuNo}
+    </select>
+    <!--根据id,学号查询信息-->
+    <select id="findByIdandStuNo" parameterType="java.util.Map" resultType="int">
+        select count(*) from t_student where id !=#{id} and stu_no=#{stuNo}
+    </select>
+    <!--增加学生-->
+    <insert id="addStudent" parameterType="com.springboottest.model.Student">
+        insert into t_student(stu_no,stu_name,stu_birthday,stu_photo,class_fk) values (#{stuNo},#{stuName},#{stuBirthday},#{stuPhoto},#{classFk})
+    </insert>
+
+    <!--修改学生-->
+    <update id="updateStudent" parameterType="java.util.Map">
+        update t_student set stu_no=#{student.stuNo},stu_name=#{student.stuName},stu_birthday=#{student.stuBirthday},stu_photo=#{student.stuPhoto},class_fk=#{student.classFk} where id=#{id}
+    </update>
+</mapper>

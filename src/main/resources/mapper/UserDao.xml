@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+        <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.springboottest.dao.UserDao">
+    <!--用户登录-->
+    <select id="login" resultType="com.springboottest.model.User">
+        select * from t_user where id_card=#{idcard} and password=#{password}
+    </select>
+
+    <!--用户注册-->
+    <insert id="regist"  parameterType="com.springboottest.model.User">
+        insert  into t_user(id_card,username,password,birthday,tel)
+        values (#{idcard},#{username},#{password},#{birthday},#{tel})
+    </insert>
+
+    <!--根据用户号和姓名查询结果分页并排序-->
+    <select id="queryUser" resultType="java.util.Map">
+        select t_user.*,role_name from t_user left join t_role on t_user.role_id=t_role.id
+        where id_card like '%${keyword}%' or username like '%${keyword}%' order by ${orderby} ${asc}
+    </select>
+    <!--查询所有用户-->
+    <select id="findAllUser" resultType="java.util.Map">
+        select t_user.*,role_name from t_user left join t_role
+        on t_user.role_id=t_role.id
+    </select>
+    <!--通过id查找用户-->
+    <select id="findUserById" resultType="com.springboottest.model.User">
+        select * from t_user where id=#{id}
+    </select>
+
+    <!--通过用户账号idcard查找用户-->
+    <select id="findUserByIdcard" resultType="com.springboottest.model.User">
+        select * from t_user where id_card=#{idcard}
+    </select>
+
+    <!--根据id,用户号查询信息-->
+    <select id="findByIdandUserNo" parameterType="java.util.Map" resultType="int">
+        select count(*) from t_user where id !=#{id} and id_card=#{idCard}
+    </select>
+
+    <!--修改用户-->
+    <update id="updateUserById" parameterType="java.util.Map">
+        update t_user set id_card=#{user.idcard},username=#{user.username},birthday=#{user.birthday},tel=#{user.tel} where id=#{id}
+    </update>
+
+    <!--修改密码-->
+    <update id="updatePass" parameterType="java.util.Map">
+        update t_user set password=#{password} where id=#{id}
+    </update>
+
+    <!--删除用户-->
+    <delete id="deleteUserById">
+        delete from t_user where id=#{id}
+    </delete>
+
+
+</mapper>

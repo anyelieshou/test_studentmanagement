@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>学生管理</title>
+    <script src="${ctxPath}/js/jquery-3.4.1.min.js"></script>
+    <script src="${ctxPath}/js/vue.min.js"></script>
+    <style type="text/css">
+        .center{
+            text-align: center;
+        }
+        a{
+            text-decoration: none;
+        }
+        .currentOrder{
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<h1 class="center">学生信息管理</h1>
+<div id="stu_div" class="center" style="margin-top: 50px">
+    <div>
+        姓名:<input type="text" v-model="keyword"/>
+        班级:<select v-model="classId">
+        <option></option>
+        #for(clazz:classList)
+        <option value="#(clazz.id)">#(clazz.class_full_name)</option>
+        #end
+    </select>
+        <button @click="queryStudent">搜索</button>
+    </div>
+    <table align="center" class="center" width="60%" border="1"
+           cellspacing="0" cellpadding="0">
+        <thead>
+        <tr>
+            <th width="100">学号
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_no'&& currentOrderby.asc}"
+                   @click="orderStudentList('stu_no',true)">↑</a>
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_no'&& !currentOrderby.asc}"
+                   @click="orderStudentList('stu_no',false)">↓</a>
+            </th>
+            <th width="100">姓名
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_name'&& currentOrderby.asc}"
+                   @click="orderStudentList('stu_name',true)">↑</a>
+                <a href="javascript://"
+                   :class="{currentOrder:currentOrderby.orderby=='stu_name'&& !currentOrderby.asc}"
+                   @click="orderStudentList('stu_name',false)">↓</a>
+            </th>
+            <th width="100">出生日期</th>
+            <th width="100">班级编号</th>
+            <th width="100">班级名称</th>
+            <th width="100">入学年份</th>
+        </tr>
+        </thead>
+        <tr v-if="stuQueryResult.stuArray==null"><td colspan="5">loading...</td></tr>
+        <tbody v-for="stu in stuQueryResult.stuArray">
+        <tr>
+            <td><a href="javascript://">{{stu.stu_no}}</a></td>
+            <td>{{stu.stu_name}}</td>
+            <td>{{stu.stu_birthday}}</td>
+            <td>{{stu.class_no}}</td>
+            <td>{{stu.class_name}}</td>
+            <td>{{stu.enter_year}}</td>
+        </tr>
+        </tbody>
+    </table>
+    <!--分页-->
+    <div>
+        <div align="center">
+            <a href="javascript://" @click="gotoPage(1)">首页</a>
+            <a href="javascript://" @click="gotoPage(queryPage.currentPage-1)">上一页</a>
+            <a href="javascript://" @click="gotoPage(queryPage.currentPage+1)">下一页</a>
+            <a href="javascript://" @click="gotoPage(stuQueryResult.pageCount)">末页</a>
+        </div>
+        <div style="text-align: center">
+            当前是第{{queryPage.currentPage}}页，每页
+            <select id="page_size_rel" v-model="queryPage.pageSize" @change="queryStudent">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+            </select>
+            条，共{{stuQueryResult.pageCount}}页,
+            共{{stuQueryResult.recCount}}条数据
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script>
+    new Vue({
+        el:"#stu_div",
+        data:{
+            keyword:"",
+            stuQueryResult:{
+                stuArray:null
+            },
+            queryPage:{
+                currentPage:1,
+                pageSize:10
+            },
+            currentOrderby:{
+                orderby:"stu_no",
+                asc:true
+            }
+        },
+        methods:{
+            queryStudent:function (){
+                $.post("/student/query",{
+                    keyword:this.keyword,
+                    classId:this.classId,
+                    orderby:this.currentOrderby.orderby,
+                    asc:this.currentOrderby.asc,
+                    pageNo:this.queryPage.currentPage,
+                    pageSize:this.queryPage.pageSize
+                },response=>this.stuQueryResult=response);
+            },
+            orderStudentList:function(orderby,asc){
+                this.currentOrderby.orderby=orderby;
+                this.currentOrderby.asc=asc;
+                this.queryStudent();
+            },
+            gotoPage:function (pageNo) {
+                if (pageNo<1){
+                    alert("当前已经是第一页");
+                    return;
+                }
+                if (pageNo>this.stuQueryResult.pageCount) {
+                    alert("已经是最末页");
+                    return;
+                }
+                this.queryPage.currentPage=pageNo;
+                this.queryStudent();
+            }
+        },
+        mounted:function () {
+            this.queryStudent();
+        }
+    })
+</script>
